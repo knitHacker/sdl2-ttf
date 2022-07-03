@@ -1,6 +1,5 @@
 # sdl2-ttf
 
-[![Build Status](https://secure.travis-ci.org/haskell-game/sdl2-ttf.svg?master)](https://travis-ci.org/haskell-game/sdl2-ttf)
 [![Hackage](https://img.shields.io/hackage/v/sdl2-ttf.svg)](https://hackage.haskell.org/package/sdl2-ttf)
 
 
