@@ -16,7 +16,7 @@ throwing an 'SDLException' in case it encounters an error.
 
 -}
 
-{-# LANGUAGE DeriveGeneric, LambdaCase, OverloadedStrings #-}
+{-# LANGUAGE CPP, DeriveGeneric, LambdaCase, OverloadedStrings #-}
 
 module SDL.Font
   (
@@ -90,11 +90,11 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Bits ((.&.), (.|.))
 import Data.ByteString (ByteString)
 import Data.ByteString.Unsafe (unsafePackCString, unsafeUseAsCStringLen)
-import Data.Text (Text)
+import Data.Text (Text, unpack)
 import Data.Text.Encoding (decodeUtf8)
 import Data.Text.Foreign (lengthWord16, unsafeCopyToPtr)
 import Data.Word (Word16, Word8)
-import Foreign.C.String (CString, withCString)
+import Foreign.C.String (CString)
 import Foreign.C.Types (CInt, CUShort)
 import Foreign.Marshal.Alloc (alloca, allocaBytes)
 import Foreign.Marshal.Utils (fromBool, toBool, with)
@@ -105,9 +105,28 @@ import SDL (SDLException (SDLCallFailed), Surface (..))
 import SDL.Internal.Exception
 import SDL.Raw.Filesystem (rwFromConstMem)
 import SDL.Vect (V4 (..))
+import System.IO (utf8)
 
+import qualified Data.Text.Foreign
+import qualified Foreign.C.String
+import qualified GHC.Foreign
 import qualified SDL.Raw
 import qualified SDL.Raw.Font
+
+-- stolen from https://github.com/haskell-game/dear-imgui.hs/blob/main/src/DearImGui/Internal/Text.hs
+#if MIN_VERSION_text(2,0,1)
+
+withCString :: Text -> (CString -> IO a) -> IO a
+withCString = Data.Text.Foreign.withCString
+
+#else
+
+withCString :: Text -> (CString -> IO a) -> IO a
+withCString t action = do
+  GHC.Foreign.withCString utf8 (unpack t) $ \textPtr ->
+    action textPtr
+
+#endif
 
 -- | Gets the major, minor, patch versions of the linked @SDL2_ttf@ library.
 --
@@ -149,7 +168,7 @@ load :: MonadIO m => FilePath -> PointSize -> m Font
 load path pts =
   fmap Font .
     throwIfNull "SDL.Font.load" "TTF_OpenFont" .
-      liftIO . withCString path $
+      liftIO . Foreign.C.String.withCString path $
         flip SDL.Raw.Font.openFont $ fromIntegral pts
 
 -- | Same as 'load', but accepts a 'ByteString' containing a font instead.
@@ -173,7 +192,7 @@ loadIndex :: MonadIO m => FilePath -> PointSize -> Index -> m Font
 loadIndex path pts i =
   fmap Font .
     throwIfNull "SDL.Font.loadIndex" "TTF_OpenFontIndex" .
-      liftIO . withCString path $ \cpath ->
+      liftIO . Foreign.C.String.withCString path $ \cpath ->
         SDL.Raw.Font.openFontIndex cpath (fromIntegral pts) (fromIntegral i)
 
 -- | Same as 'loadIndex', but accepts a 'ByteString' containing a font instead.

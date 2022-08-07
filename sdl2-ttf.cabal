@@ -45,7 +45,7 @@ library
     bytestring       >= 0.10.4.0,
     sdl2             >= 2.2,
     template-haskell,
-    text             >= 1.1.0.0,
+    text             >= 1.1.0.0 && < 2 || >= 2.0.1,
     th-abstraction   >= 0.4.0.0,
     transformers     >= 0.4
 
