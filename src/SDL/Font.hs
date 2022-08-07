@@ -16,9 +16,7 @@ throwing an 'SDLException' in case it encounters an error.
 
 -}
 
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE DeriveGeneric, LambdaCase, OverloadedStrings #-}
 
 module SDL.Font
   (
@@ -86,27 +84,27 @@ module SDL.Font
   , blendedWrapped
   ) where
 
-import Control.Exception      (throwIO)
-import Control.Monad          (unless)
+import Control.Exception (throwIO)
+import Control.Monad (unless)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Bits              ((.&.), (.|.))
-import Data.ByteString        (ByteString)
-import Data.ByteString.Unsafe (unsafeUseAsCStringLen, unsafePackCString)
-import Data.Text              (Text)
-import Data.Text.Encoding     (decodeUtf8)
-import Data.Text.Foreign      (lengthWord16, unsafeCopyToPtr)
-import Data.Word              (Word8, Word16)
-import Foreign.C.String       (CString, withCString)
-import Foreign.C.Types        (CUShort, CInt)
-import Foreign.Marshal.Alloc  (allocaBytes, alloca)
-import Foreign.Marshal.Utils  (with, fromBool, toBool)
-import Foreign.Ptr            (Ptr, castPtr, nullPtr)
-import Foreign.Storable       (peek, pokeByteOff)
-import GHC.Generics           (Generic)
-import SDL                    (Surface(..), SDLException(SDLCallFailed))
+import Data.Bits ((.&.), (.|.))
+import Data.ByteString (ByteString)
+import Data.ByteString.Unsafe (unsafePackCString, unsafeUseAsCStringLen)
+import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8)
+import Data.Text.Foreign (lengthWord16, unsafeCopyToPtr)
+import Data.Word (Word16, Word8)
+import Foreign.C.String (CString, withCString)
+import Foreign.C.Types (CInt, CUShort)
+import Foreign.Marshal.Alloc (alloca, allocaBytes)
+import Foreign.Marshal.Utils (fromBool, toBool, with)
+import Foreign.Ptr (Ptr, castPtr, nullPtr)
+import Foreign.Storable (peek, pokeByteOff)
+import GHC.Generics (Generic)
+import SDL (SDLException (SDLCallFailed), Surface (..))
 import SDL.Internal.Exception
-import SDL.Raw.Filesystem     (rwFromConstMem)
-import SDL.Vect               (V4(..))
+import SDL.Raw.Filesystem (rwFromConstMem)
+import SDL.Vect (V4 (..))
 
 import qualified SDL.Raw
 import qualified SDL.Raw.Font
@@ -505,7 +503,7 @@ blendedGlyph (Font font) (V4 r g b a) ch =
         with (SDL.Raw.Color r g b a) $ \fg ->
           SDL.Raw.Font.renderGlyph_Blended font (fromChar ch) fg
 
--- | Same as 'blended', but renders across multiple lines. 
+-- | Same as 'blended', but renders across multiple lines.
 --   Text is wrapped to multiple lines on line endings and on word boundaries
 --   if it extends beyond wrapLength in pixels.
 blendedWrapped :: MonadIO m => Font -> Color -> Int -> Text -> m SDL.Surface
