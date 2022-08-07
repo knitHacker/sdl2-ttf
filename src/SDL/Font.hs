@@ -90,40 +90,42 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Bits ((.&.), (.|.))
 import Data.ByteString (ByteString)
 import Data.ByteString.Unsafe (unsafePackCString, unsafeUseAsCStringLen)
-import Data.Text (Text, unpack)
+import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8)
-import Data.Text.Foreign (lengthWord16, unsafeCopyToPtr)
-import Data.Word (Word16, Word8)
+import Data.Word (Word8)
 import Foreign.C.String (CString)
-import Foreign.C.Types (CInt, CUShort)
-import Foreign.Marshal.Alloc (alloca, allocaBytes)
+import Foreign.C.Types (CInt)
+import Foreign.Marshal.Alloc (alloca)
 import Foreign.Marshal.Utils (fromBool, toBool, with)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
-import Foreign.Storable (peek, pokeByteOff)
+import Foreign.Storable (peek)
 import GHC.Generics (Generic)
 import SDL (SDLException (SDLCallFailed), Surface (..))
 import SDL.Internal.Exception
 import SDL.Raw.Filesystem (rwFromConstMem)
 import SDL.Vect (V4 (..))
-import System.IO (utf8)
 
-import qualified Data.Text.Foreign
 import qualified Foreign.C.String
-import qualified GHC.Foreign
 import qualified SDL.Raw
 import qualified SDL.Raw.Font
 
 -- stolen from https://github.com/haskell-game/dear-imgui.hs/blob/main/src/DearImGui/Internal/Text.hs
 #if MIN_VERSION_text(2,0,1)
 
+import qualified Data.Text.Foreign
+
 withCString :: Text -> (CString -> IO a) -> IO a
 withCString = Data.Text.Foreign.withCString
 
 #else
 
+import qualified Data.Text
+import qualified GHC.Foreign
+import qualified System.IO
+
 withCString :: Text -> (CString -> IO a) -> IO a
 withCString t action = do
-  GHC.Foreign.withCString utf8 (unpack t) $ \textPtr ->
+  GHC.Foreign.withCString System.IO.utf8 (Data.Text.unpack t) $ \textPtr ->
     action textPtr
 
 #endif
@@ -222,10 +224,10 @@ unmanaged p = Surface p Nothing
 solid :: MonadIO m => Font -> Color -> Text -> m SDL.Surface
 solid (Font font) (V4 r g b a) text =
   fmap unmanaged .
-    throwIfNull "SDL.Font.solid" "TTF_RenderUNICODE_Solid" .
-      liftIO . withText text $ \ptr ->
+    throwIfNull "SDL.Font.solid" "TTF_RenderUTF8_Solid" .
+      liftIO . withCString text $ \ptr ->
         with (SDL.Raw.Color r g b a) $ \fg ->
-          SDL.Raw.Font.renderUNICODE_Solid font (castPtr ptr) fg
+          SDL.Raw.Font.renderUTF8_Solid font (castPtr ptr) fg
 
 -- | Uses the /slow and nice, but with a solid box/ method.
 --
@@ -237,11 +239,11 @@ solid (Font font) (V4 r g b a) text =
 shaded :: MonadIO m => Font -> Color -> Color -> Text -> m SDL.Surface
 shaded (Font font) (V4 r g b a) (V4 r2 g2 b2 a2) text =
   fmap unmanaged .
-    throwIfNull "SDL.Font.shaded" "TTF_RenderUNICODE_Shaded" .
-      liftIO . withText text $ \ptr ->
+    throwIfNull "SDL.Font.shaded" "TTF_RenderUTF8_Shaded" .
+      liftIO . withCString text $ \ptr ->
         with (SDL.Raw.Color r g b a) $ \fg ->
           with (SDL.Raw.Color r2 g2 b2 a2) $ \bg ->
-            SDL.Raw.Font.renderUNICODE_Shaded font (castPtr ptr) fg bg
+            SDL.Raw.Font.renderUTF8_Shaded font (castPtr ptr) fg bg
 
 -- | The /slow slow slow, but ultra nice over another image/ method, 'blended'
 -- renders text at high quality.
@@ -254,21 +256,10 @@ shaded (Font font) (V4 r g b a) (V4 r2 g2 b2 a2) text =
 blended :: MonadIO m => Font -> Color -> Text -> m SDL.Surface
 blended (Font font) (V4 r g b a) text =
   fmap unmanaged .
-    throwIfNull "SDL.Font.blended" "TTF_RenderUNICODE_Blended" .
-      liftIO . withText text $ \ptr ->
+    throwIfNull "SDL.Font.blended" "TTF_RenderUTF8_Blended" .
+      liftIO . withCString text $ \ptr ->
         with (SDL.Raw.Color r g b a) $ \fg ->
-          SDL.Raw.Font.renderUNICODE_Blended font (castPtr ptr) fg
-
--- Analogous to Data.Text.Foreign.useAsPtr, just appends a null-byte.
--- FIXME: Is this even necessary?
-withText :: Text -> (Ptr Word16 -> IO a) -> IO a
-withText text act =
-  allocaBytes len $ \ptr -> do
-    unsafeCopyToPtr text ptr
-    pokeByteOff ptr (len - 2) (0 :: CUShort)
-    act ptr
-  where
-    len = 2*(lengthWord16 text + 1)
+          SDL.Raw.Font.renderUTF8_Blended font (castPtr ptr) fg
 
 -- Helper function for converting a bitmask into a list of values.
 fromMaskWith :: (Enum a, Bounded a) => (a -> CInt) -> CInt -> [a]
@@ -481,10 +472,10 @@ glyphMetrics (Font font) ch =
 size :: MonadIO m => Font -> Text -> m (Int, Int)
 size (Font font) text =
     liftIO .
-      withText text $ \ptr ->
+      withCString text $ \ptr ->
         alloca $ \w ->
           alloca $ \h ->
-            SDL.Raw.Font.sizeUNICODE font (castPtr ptr) w h
+            SDL.Raw.Font.sizeUTF8 font (castPtr ptr) w h
               >>= \case
                 0 -> do
                   w' <- fromIntegral <$> peek w
@@ -492,7 +483,7 @@ size (Font font) text =
                   return (w', h')
                 _ -> do
                   err <- getError
-                  throwIO $ SDLCallFailed "SDL.Font.size" "TTF_SizeUNICODE" err
+                  throwIO $ SDLCallFailed "SDL.Font.size" "TTF_SizeUTF8" err
 
 -- | Same as 'solid', but renders a single glyph instead.
 solidGlyph :: MonadIO m => Font -> Color -> Char -> m SDL.Surface
@@ -528,10 +519,10 @@ blendedGlyph (Font font) (V4 r g b a) ch =
 blendedWrapped :: MonadIO m => Font -> Color -> Int -> Text -> m SDL.Surface
 blendedWrapped (Font font) (V4 r g b a) wrapLength text =
   fmap unmanaged .
-    throwIfNull "SDL.Font.blended" "TTF_RenderUNICODE_Blended_Wrapped" .
-      liftIO . withText text $ \ptr ->
+    throwIfNull "SDL.Font.blended" "TTF_RenderUTF8_Blended_Wrapped" .
+      liftIO . withCString text $ \ptr ->
         with (SDL.Raw.Color r g b a) $ \fg ->
-          SDL.Raw.Font.renderUNICODE_Blended_Wrapped font (castPtr ptr) fg $ fromIntegral wrapLength
+          SDL.Raw.Font.renderUTF8_Blended_Wrapped font (castPtr ptr) fg $ fromIntegral wrapLength
 
 -- | From a given 'Font' get the kerning size of two glyphs.
 getKerningSize :: MonadIO m => Font -> Index -> Index -> m Int
