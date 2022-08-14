@@ -8,7 +8,7 @@
 Haskell bindings for the True Type Font library for SDL.
 
 - libsdl <https://www.libsdl.org>
-- sdl2-ttf <https://www.libsdl.org/projects/SDL_ttf/>
+- sdl2-ttf <https://github.com/libsdl-org/SDL_ttf>
 
 Both the raw and the higher level bindings should allow you to use any aspect
 of the original SDL2_ttf library. Please report an issue if you encounter a bug
