@@ -39,12 +39,9 @@ library
     src
 
   if flag(pkgconfig)
-    pkgconfig-depends:
-    sdl2 >= 2.0.3,
-    SDL2_ttf >= 2.0.12
+    pkgconfig-depends: sdl2 >= 2.0.3, SDL2_ttf >= 2.0.12
   else
-    extra-libraries:
-      SDL2_ttf
+    extra-libraries: SDL2_ttf
 
   c-sources:
     cbits/helpers.c
