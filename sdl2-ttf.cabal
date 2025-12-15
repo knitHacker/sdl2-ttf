@@ -18,13 +18,12 @@ tested-with:   GHC ==8.0.2 || ==8.2.2 || ==8.4.4 || ==8.6.5 || ==8.8.4 || ==8.10
 
 source-repository head
   type:     git
-
+  location: https://github.com/haskell-game/sdl2-ttf
 
 flag pkgconfig
   description: Use pkgconfig to find SDL2_ttf
   manual:      True
   default:     True
-  location: https://github.com/haskell-game/sdl2-ttf
 
 library
   ghc-options: -Wall
